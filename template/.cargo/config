@@ -1,0 +1,4 @@
+[target.powerpc-unknown-linux-gnu]
+#linker = "powerpc-eabi-ld"
+linker = "powerpc-eabi-gcc"
+rustflags = ["-C", "relocation-model=static", "-C", "link-args=-MMD,-MP,-Wall,-DGEKKO,-mogc,-mcpu=750,-meabi,-mno-longcall,-mhard-float"]

@@ -1,0 +1,9 @@
+[package]
+name = "cargo-mextk"
+version = "0.1.0"
+authors = ["jam1garner <8260240+jam1garner@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+structopt = "0.3"
+include_dir = "0.6"
