@@ -28,7 +28,7 @@ fn extract_recursive(to: &Path, dir: &Dir) -> io::Result<()> {
 
     for file in dir.files() {
         match file.path() {
-            path if path.to_string_lossy() == "Cargo.toml" => {
+            path if path.to_string_lossy() == "_Cargo.toml" => {
                 fs::write(
                     to.join("Cargo.toml"),
                     file.contents_utf8()
