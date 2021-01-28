@@ -5,5 +5,8 @@ authors = ["jam1garner <8260240+jam1garner@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
+thiserror = "1"
 structopt = "0.3"
 include_dir = "0.6"
+cargo_metadata = "0.9.1"
+owo-colors = { git = "https://github.com/jam1garner/owo-colors", branch = "tty", features = ["tty"] }

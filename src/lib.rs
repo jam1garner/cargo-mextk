@@ -1,11 +1,28 @@
+use owo_colors::OwoColorize;
 use structopt::StructOpt;
 
-mod new;
+macro_rules! subcommands {
+    ($($ident:ident),* $(,)?) => {
+        $(
+            mod $ident;
+            pub use $ident::*;
+        )*
+    };
+}
+
+subcommands!{
+    new,
+    build,
+}
+
+mod error;
+pub use error::Error;
+
 
 #[derive(StructOpt)]
 #[structopt(bin_name = "cargo")]
 pub enum Args {
-    Skyline(SubCommands),
+    Mextk(SubCommands),
 }
 
 #[derive(StructOpt)]
@@ -13,17 +30,31 @@ pub enum SubCommands {
     #[structopt(help = "Create a new mod from the mextk template")]
     New {
         name: String,
-    }
+    },
+    
+    #[structopt(help = "Build the current crate targetting MexTK")]
+    Build {
+        #[structopt(long)]
+        debug: bool,
+    },
 }
 
-pub struct Error;
-
 pub fn main(args: Args) -> Result<(), Error> {
-    let Args::Skyline(command) = args;
+    let Args::Mextk(command) = args;
 
     match command {
-        SubCommands::New { name } => todo!(),
+        SubCommands::New { name } => new(&name),
+        SubCommands::Build { debug } => {
+            let output = build(debug)?;
+
+            println!(
+                "{}",
+                format!("Object file built to {}", output.display())
+                    .bright_green()
+                    .bold()
+            );
+
+            Ok(())
+        },
     }
-    
-    Ok(())
 }
