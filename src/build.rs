@@ -49,7 +49,11 @@ pub fn build(debug: bool) -> Result<PathBuf, Error> {
                                 path.set_file_name(file_name);
                                 path.set_extension("o");
 
-                                Some(path)
+                                if path.exists() {
+                                    Some(path)
+                                } else {
+                                    None
+                                }
                             })
                             .next()
                     }
