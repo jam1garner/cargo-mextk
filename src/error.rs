@@ -17,4 +17,10 @@ pub enum Error {
 
     #[error("no build artifact was produced by cargo")]
     NoBuildArtifact,
+
+    #[error("provided ISO is not in the GCM format")]
+    InvalidGcm,
+
+    #[error("no such iso id exists. Add an iso with `cargo mextk add-iso [iso]`")]
+    NoSuchIso,
 }
