@@ -42,6 +42,12 @@ pub enum SubCommands {
         debug: bool,
     },
     
+    #[structopt(help = "Run the current crate targetting MexTK")]
+    Run {
+        #[structopt(long)]
+        debug: bool,
+    },
+    
     #[structopt(help = "Add an ISO to be managed")]
     AddIso {
         iso: PathBuf,
@@ -54,6 +60,11 @@ pub enum SubCommands {
 
     #[structopt(help = "List all ISOs being managed")]
     List,
+    
+    #[structopt(help = "Restore the extracted files for a given managed ISO provided its id")]
+    Restore {
+        id: String,
+    }
 }
 
 pub fn main(args: Args) -> Result<(), Error> {
@@ -76,6 +87,7 @@ pub fn main(args: Args) -> Result<(), Error> {
         SubCommands::AddIso { iso } => iso::add(&iso, true),
         SubCommands::RemoveIso { id } => iso::remove(&id),
         SubCommands::List => iso::list().map(iso::display_list),
-        //SubCommands::Build { debug } => run(debug)
+        SubCommands::Run { debug } => run(debug),
+        SubCommands::Restore { id } => iso::restore(&id, true),
     }
 }

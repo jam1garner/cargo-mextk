@@ -16,6 +16,10 @@ pub fn iso_dir() -> PathBuf {
         .ensure_exists()
 }
 
+pub fn dir_from_id(id: &str) -> PathBuf {
+    iso_dir().push_join(id)
+}
+
 pub(crate) trait PathExt {
     fn ensure_exists(self) -> Self;
     fn push_join<P: AsRef<Path>>(self, join: P) -> Self;

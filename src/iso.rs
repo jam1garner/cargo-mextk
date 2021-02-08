@@ -8,7 +8,9 @@ use cli_table::{print_stdout, Table, Title};
 use cli_table::format::{Justify, Border, Separator, HorizontalLine, VerticalLine};
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::io::Write;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf, Component};
 
 pub fn add(iso_path: &Path, output: bool) -> Result<(), Error> {
     let iso = match GcmFile::open(iso_path) {
@@ -24,6 +26,7 @@ pub fn add(iso_path: &Path, output: bool) -> Result<(), Error> {
 
     let game_dir = paths::iso_dir().push_join(id).ensure_exists();
     let extracted_path = game_dir.join("extracted").ensure_exists();
+    let csv_path = game_dir.join("hashes.csv");
     
     if output {
         println!("Copying ISO...");
@@ -35,7 +38,7 @@ pub fn add(iso_path: &Path, output: bool) -> Result<(), Error> {
         println!("Extracting ISO...");
     }
 
-    extract(iso, &iso_path, &extracted_path, false);
+    extract(iso, &iso_path, &extracted_path, &csv_path, false);
 
     if output {
         println!("Success!");
@@ -147,6 +150,83 @@ impl Entry {
     }
 }
 
+pub fn add_file_recursive(path: &Path, files: &mut Vec<PathBuf>) {
+    for file in fs::read_dir(path).unwrap() {
+        let file = file.unwrap();
+        let path = path.join(file.path());
+
+        if file.file_type().unwrap().is_dir() {
+            add_file_recursive(&path, files);
+        } else {
+            files.push(path);
+        }
+    }
+}
+
+pub fn restore(id: &str, _output: bool) -> Result<(), Error> {
+    let game_dir = paths::iso_dir().push_join(id);
+    let extracted_path = game_dir.join("extracted");
+    let csv_path = game_dir.join("hashes.csv");
+
+    let iso_path = game_dir.join("game.iso");
+    let iso = GcmFile::open(&iso_path).map_err(|_| Error::NoSuchIso)?;
+    let file = std::fs::File::open(&iso_path).unwrap();
+    let mmap = unsafe { Mmap::map(&file).unwrap() };
+    let iso_file = &mmap[..];
+
+    let mut files = Vec::new();
+    add_file_recursive(&extracted_path, &mut files);
+
+    let csv_contents = fs::read_to_string(csv_path).unwrap();
+    let hashes = csv_contents
+        .trim()
+        .split('\n')
+        .filter_map(|line| {
+            if let &[path, hash] = &line.split(',').collect::<Vec<&str>>()[..] {
+                Some((path, hash.parse().unwrap()))
+            } else {
+                None
+            }
+        })
+        .collect::<HashMap<&str, u64>>();
+
+    files.into_par_iter().for_each(|path| {
+        let file = fs::read(&path).unwrap();
+
+        if let Some(&hash) = hashes.get(&path.to_str().unwrap()) {
+            if hash != seahash::hash(&file) {
+                // hash does not match original, restore
+                let rel_path = pathdiff::diff_paths(&path, &extracted_path).unwrap();
+
+                let mut entry: Option<DirEntry> = None;
+                for component in rel_path.components() {
+                    match component {
+                        Component::Normal(component) => {
+                            let next_child = component.to_str().unwrap();
+
+                            entry = Some(match entry {
+                                Some(entry) => entry.get_child(next_child).unwrap(),
+                                None => iso.filesystem.get_child(next_child).unwrap(),
+                            });
+                        }
+                        _ => todo!()
+                    }
+                }
+
+                let file = entry.unwrap().as_file().unwrap();
+                let start = file.offset as usize;
+                let end = file.offset as usize + file.size as usize;
+
+                fs::write(&path, &iso_file[start..end]).unwrap();
+            }
+        } else {
+            todo!("support missing hash")
+        }
+    });
+
+    Ok(())
+}
+
 fn extract_entry<'a>(entry: DirEntry<'a>, path: &Path, files: &mut Vec<(PathBuf, File)>) {
     if let Some(file_data) = entry.as_file() {
         files.push((path.join(entry.entry_name()), file_data));
@@ -159,7 +239,11 @@ fn extract_entry<'a>(entry: DirEntry<'a>, path: &Path, files: &mut Vec<(PathBuf,
     }
 }
 
-fn extract(iso: GcmFile, path: &Path, to: &Path, single_thread: bool) {
+fn to_csv_line(path: &Path, data: &[u8]) -> String {
+    format!("{},{}", path.display(), seahash::hash(&data))
+}
+
+fn extract(iso: GcmFile, path: &Path, to: &Path, csv_path: &Path, single_thread: bool) {
     let file = std::fs::File::open(&path).unwrap();
     let mmap = unsafe { Mmap::map(&file).unwrap() };
 
@@ -168,23 +252,33 @@ fn extract(iso: GcmFile, path: &Path, to: &Path, single_thread: bool) {
         extract_entry(entry, to, &mut files)
     }
 
+    let dol_path = to.join("boot.dol");
+
+    fs::write(&dol_path, &iso.dol.raw_data).unwrap();
+
+    let mut csv = std::io::BufWriter::new(fs::File::create(csv_path).unwrap());
+
+    writeln!(csv, "{}", to_csv_line(&dol_path, &iso.dol.raw_data)).unwrap();
+
     let iso = &mmap[..];
 
     let extract_file = |(path, file): &(PathBuf, File)| {
         let start = file.offset as usize;
         let end = start + (file.size as usize);
-        let file = &iso[start..end];
+        let file = iso[start..end].to_owned();
+
+        let path = path.as_path();
         
-        if let Err(err) = fs::write(path, file) {
-            println!("Path: {}", path.display());
-            println!("Error: {:?}", err);
-            println!();
-        }
+        fs::write(path, &file).unwrap();
+
+        to_csv_line(path, &file)
     };
 
-    if single_thread {
-        files.iter().for_each(extract_file);
+    let hashes: Vec<String> = if single_thread {
+        files.iter().map(extract_file).collect()
     } else {
-        files.par_iter().for_each(extract_file);
-    }
+        files.par_iter().map(extract_file).collect()
+    };
+
+    csv.write(hashes.join("\n").as_bytes()).unwrap();
 }
