@@ -14,6 +14,7 @@ macro_rules! subcommands {
 subcommands!{
     new,
     build,
+    install,
     run,
 }
 
@@ -73,14 +74,14 @@ pub fn main(args: Args) -> Result<(), Error> {
     match command {
         SubCommands::New { name } => new(&name),
         SubCommands::Build { debug } => {
-            let output = build(debug)?;
+            let _output = build(debug)?;
 
-            println!(
-                "{}",
-                format!("Object file built to {}", output.display())
-                    .bright_green()
-                    .bold()
-            );
+            //println!(
+            //    "{}",
+            //    format!("Object file built to {}", output.display())
+            //        .bright_green()
+            //        .bold()
+            //);
 
             Ok(())
         },

@@ -163,9 +163,9 @@ pub fn add_file_recursive(path: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
-pub fn restore(id: &str, _output: bool) -> Result<(), Error> {
+pub fn restore(id: &str, output: bool) -> Result<(), Error> {
     let game_dir = paths::iso_dir().push_join(id);
-    let extracted_path = game_dir.join("extracted");
+    let extracted_path = game_dir.join("extracted").push_join("files");
     let csv_path = game_dir.join("hashes.csv");
 
     let iso_path = game_dir.join("game.iso");
@@ -197,6 +197,10 @@ pub fn restore(id: &str, _output: bool) -> Result<(), Error> {
             if hash != seahash::hash(&file) {
                 // hash does not match original, restore
                 let rel_path = pathdiff::diff_paths(&path, &extracted_path).unwrap();
+
+                if output {
+                    println!("Reverting {}...", rel_path.display());
+                }
 
                 let mut entry: Option<DirEntry> = None;
                 for component in rel_path.components() {
@@ -249,16 +253,32 @@ fn extract(iso: GcmFile, path: &Path, to: &Path, csv_path: &Path, single_thread:
 
     let mut files = Vec::new();
     for entry in iso.filesystem.iter_root() {
-        extract_entry(entry, to, &mut files)
+        extract_entry(entry, &to.join("files"), &mut files)
     }
 
-    let dol_path = to.join("boot.dol");
+    let sys_path = to.join("sys");
 
+    let _ = fs::create_dir_all(&sys_path);
+
+    // Extract sys files
+    let dol_path = sys_path.join("main.dol");
     fs::write(&dol_path, &iso.dol.raw_data).unwrap();
+    
+    let boot_bin_path = sys_path.join("boot.bin");
+    fs::write(&boot_bin_path, &iso.boot_bin).unwrap();
+
+    let fst_bin_path = sys_path.join("fst.bin");
+    fs::write(&fst_bin_path, &iso.fst_bytes).unwrap();
+
+    let bi2_bin_path = sys_path.join("bi2.bin");
+    fs::write(&bi2_bin_path, &iso.bi2_bin).unwrap();
+
+    let apploader_path = sys_path.join("apploader.img");
+    fs::write(&apploader_path, &iso.apploader).unwrap();
 
     let mut csv = std::io::BufWriter::new(fs::File::create(csv_path).unwrap());
 
-    writeln!(csv, "{}", to_csv_line(&dol_path, &iso.dol.raw_data)).unwrap();
+    //writeln!(csv, "{}", to_csv_line(&dol_path, &iso.dol.raw_data)).unwrap();
 
     let iso = &mmap[..];
 

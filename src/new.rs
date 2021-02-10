@@ -1,8 +1,7 @@
 use crate::Error;
 use include_dir::{include_dir, Dir};
 
-use std::fs;
-use std::io;
+use std::{io, fs};
 use std::path::Path;
 
 const TEMPLATE: Dir = include_dir!("template");
@@ -20,6 +19,7 @@ pub fn new(name: &str) -> Result<(), Error> {
         Ok(())
     }
 }
+
 
 fn extract_recursive(to: &Path, dir: &Dir) -> io::Result<()> {
     if !to.exists() {

@@ -23,4 +23,13 @@ pub enum Error {
 
     #[error("no such iso id exists. Add an iso with `cargo mextk add-iso [iso]`")]
     NoSuchIso,
+
+    #[error("MexTK installation could not be found. Install it to {0}.")]
+    NoMextkInstalled(String),
+
+    #[error("MexTK .NET core installation found, but `dotnet` has not been added to path.")]
+    NoDotNet,
+
+    #[error("A network error occurred while attempting to download required files")]
+    NetworkError,
 }

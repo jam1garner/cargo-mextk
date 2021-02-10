@@ -4,6 +4,9 @@ use cargo_metadata::Message;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+mod mextk;
+mod dep_files;
+
 const CARGO_OPTIONS: &[&str] = &[
     "rustc",
     "--message-format", "json-diagnostic-rendered-ansi",
@@ -73,8 +76,31 @@ pub fn build(debug: bool) -> Result<PathBuf, Error> {
     let exit_status = command.wait().unwrap();
 
     if !exit_status.success() {
-        Err(Error::ExitStatus(exit_status.code().unwrap_or(1)))
-    } else {
+        return Err(Error::ExitStatus(exit_status.code().unwrap_or(1)))
+    }
+
+    let out_dat_folder = last_artifact.parent().unwrap();
+
+    let dat_path = out_dat_folder.join("ftFunction.dat");
+
+    //MexTK.exe -ff -i "whatever_your_file_is_named.c" -s ftFunction -o "ftFunction.dat"
+    //              -t "ftFunction.txt" -l "melee.link" -q -ow -w -c
+    let output = mextk::command()?
+        .args(&["-ff", "-i"])
+        .arg(&last_artifact)
+        .args(&["-s", "ftFunction", "-o"])
+        .arg(&dat_path)
+        .arg("-t")
+        .arg(dep_files::get("ftFunction.txt")?)
+        .arg("-l")
+        .arg(dep_files::get("melee.link")?)
+        .args(&["-q", "-ow", "-w", "-c"])
+        .status()
+        .unwrap();
+
+    if output.success() {
         Ok(last_artifact)
+    } else {
+        Err(Error::ExitStatus(output.code().unwrap())) 
     }
 }

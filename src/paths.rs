@@ -3,6 +3,19 @@ use dirs_next::home_dir;
 use std::path::{Path, PathBuf};
 use std::fs;
 
+pub fn mextk_bin_dir() -> PathBuf {
+    mextk_dir()
+        .push_join("bin")
+        .push_join("mextk")
+        .ensure_exists()
+}
+
+pub fn mextk_deps_dir() -> PathBuf {
+    mextk_dir()
+        .push_join("deps")
+        .ensure_exists()
+}
+
 pub fn mextk_dir() -> PathBuf {
     home_dir()
         .unwrap()
