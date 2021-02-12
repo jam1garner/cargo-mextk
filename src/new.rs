@@ -4,8 +4,8 @@ use include_dir::{include_dir, Dir};
 use std::{io, fs};
 use std::path::Path;
 
-const TEMPLATE: Dir = include_dir!("template");
-const TEMPLATE_GIT: Dir = include_dir!("template_git");
+const TEMPLATE: Dir = include_dir!("src/template");
+const TEMPLATE_GIT: Dir = include_dir!("src/template_git");
 
 pub fn new(name: &str) -> Result<(), Error> {
     let new_dir = Path::new(name);

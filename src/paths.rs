@@ -23,6 +23,13 @@ pub fn mextk_dir() -> PathBuf {
         .ensure_exists()
 }
 
+pub fn extracted_dat_path(id: &str, dat_name: &str) -> PathBuf {
+    dir_from_id(id)
+        .push_join("extracted")
+        .push_join("files")
+        .push_join(dat_name)
+}
+
 pub fn iso_dir() -> PathBuf {
     mextk_dir()
         .push_join("iso")
@@ -31,6 +38,13 @@ pub fn iso_dir() -> PathBuf {
 
 pub fn dir_from_id(id: &str) -> PathBuf {
     iso_dir().push_join(id)
+}
+
+pub fn dol_from_id(id: &str) -> PathBuf {
+    dir_from_id(id)
+        .push_join("extracted")
+        .push_join("sys")
+        .push_join("main.dol")
 }
 
 pub(crate) trait PathExt {

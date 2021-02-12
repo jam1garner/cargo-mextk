@@ -21,7 +21,7 @@ pub enum Error {
     #[error("provided ISO is not in the GCM format")]
     InvalidGcm,
 
-    #[error("no such iso id exists. Add an iso with `cargo mextk add-iso [iso]`")]
+    #[error("no such iso id exists.")]
     NoSuchIso,
 
     #[error("MexTK installation could not be found. Install it to {0}.")]
@@ -32,4 +32,22 @@ pub enum Error {
 
     #[error("A network error occurred while attempting to download required files")]
     NetworkError,
+
+    #[error("A `Mextk.toml` file could not be found in the current directory")]
+    NoMexToml,
+
+    #[error("The project's `Mextk.toml` file is improperly formatted")]
+    InvalidToml(toml::de::Error),
+
+    #[error("The project's `Mextk.toml` is missing a dat name. ")]
+    NoDatName,
+
+    #[error("The ISO's dol file could not successfully be patched.")]
+    DolPatchFail,
+
+    #[error("A file within the ISO could not successfully be patched to add m-ex.")]
+    PatchFailed,
+
+    #[error("The `symbols` key in your Mextk.toml is invalid.")]
+    InvalidSymbolName,
 }

@@ -176,6 +176,11 @@ pub fn restore(id: &str, output: bool) -> Result<(), Error> {
 
     let mut files = Vec::new();
     add_file_recursive(&extracted_path, &mut files);
+    files.push(
+        game_dir.join("extracted")
+                .push_join("sys")
+                .push_join("main.dol")
+    );
 
     let csv_contents = fs::read_to_string(csv_path).unwrap();
     let hashes = csv_contents
@@ -195,6 +200,15 @@ pub fn restore(id: &str, output: bool) -> Result<(), Error> {
 
         if let Some(&hash) = hashes.get(&path.to_str().unwrap()) {
             if hash != seahash::hash(&file) {
+                if path.extension().unwrap().to_string_lossy() == "dol" {
+                    // restore dol file
+                    if output {
+                        println!("Reverting main.dol...");
+                    }
+                    fs::write(path, &iso.dol.raw_data).unwrap();
+
+                    return;
+                }
                 // hash does not match original, restore
                 let rel_path = pathdiff::diff_paths(&path, &extracted_path).unwrap();
 
@@ -224,7 +238,11 @@ pub fn restore(id: &str, output: bool) -> Result<(), Error> {
                 fs::write(&path, &iso_file[start..end]).unwrap();
             }
         } else {
-            todo!("support missing hash")
+            if output {
+                println!("removing: {}", path.display());
+            }
+            fs::remove_file(path).unwrap();
+            //todo!("support missing hash")
         }
     });
 
@@ -278,7 +296,7 @@ fn extract(iso: GcmFile, path: &Path, to: &Path, csv_path: &Path, single_thread:
 
     let mut csv = std::io::BufWriter::new(fs::File::create(csv_path).unwrap());
 
-    //writeln!(csv, "{}", to_csv_line(&dol_path, &iso.dol.raw_data)).unwrap();
+    writeln!(csv, "{}", to_csv_line(&dol_path, &iso.dol.raw_data)).unwrap();
 
     let iso = &mmap[..];
 

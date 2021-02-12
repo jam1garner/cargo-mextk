@@ -1,10 +1,14 @@
-use crate::Error;
 use cargo_metadata::Message;
+use crate::paths::extracted_dat_path;
+use crate::{Error, manifest::Manifest};
 
+use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-mod mextk;
+use owo_colors::OwoColorize;
+
+pub mod mextk;
 mod dep_files;
 
 const CARGO_OPTIONS: &[&str] = &[
@@ -24,6 +28,10 @@ const RELEASE: &[&str] = &["--release", "--"];
 const DEBUG: &[&str] = &["--"];
 
 pub fn build(debug: bool) -> Result<PathBuf, Error> {
+    let toml = Manifest::from_current_directory()?;
+
+    let dat_name = toml.dat.ok_or(Error::NoDatName)?;
+
     let mut command =
         Command::new("cargo")
             .args(CARGO_OPTIONS)
@@ -81,26 +89,74 @@ pub fn build(debug: bool) -> Result<PathBuf, Error> {
 
     let out_dat_folder = last_artifact.parent().unwrap();
 
-    let dat_path = out_dat_folder.join("ftFunction.dat");
+    let dat_path = out_dat_folder.join(&dat_name);
+
+    let id = "GALE01_v2";
+    let original_dat_path = extracted_dat_path(id, &dat_name);
+
+    fs::copy(&original_dat_path, &dat_path).unwrap();
+
+    let symbols = toml.symbols
+        .as_deref()
+        .map(to_file_name)
+        .unwrap_or_else(|| {
+            println!("{}", "Warning: defaulting symbols to `fighter` ".bright_yellow());
+
+            Ok("ftFunction.txt")
+        })?;
 
     //MexTK.exe -ff -i "whatever_your_file_is_named.c" -s ftFunction -o "ftFunction.dat"
     //              -t "ftFunction.txt" -l "melee.link" -q -ow -w -c
     let output = mextk::command()?
         .args(&["-ff", "-i"])
         .arg(&last_artifact)
-        .args(&["-s", "ftFunction", "-o"])
-        .arg(&dat_path)
+        .args(&["-s", "ftFunction"])
         .arg("-t")
-        .arg(dep_files::get("ftFunction.txt")?)
+        .arg(dep_files::get(symbols)?)
         .arg("-l")
         .arg(dep_files::get("melee.link")?)
-        .args(&["-q", "-ow", "-w", "-c"])
+        .args(&["-q", "-ow", "-w", "-c", "-dat"])
+        .arg(&dat_path)
         .status()
         .unwrap();
 
     if output.success() {
-        Ok(last_artifact)
+        Ok(dat_path)
     } else {
         Err(Error::ExitStatus(output.code().unwrap())) 
     }
 }
+
+fn to_file_name(name: &str) -> Result<&str, Error> {
+    if SYMBOLS_PROPER_NAMES.contains(&name) {
+        Ok(SYMBOLS_ALLOW_LIST[SYMBOLS_PROPER_NAMES.iter().position(|x| *x == name).unwrap()])
+    } else if SYMBOLS_ALLOW_LIST.contains(&name) {
+        Ok(name)
+    } else {
+        Err(Error::InvalidSymbolName)
+    }
+}
+
+pub const SYMBOLS_ALLOW_LIST: &[&str] = &[
+    "cssFunction.txt", // css
+    "evFunction.txt", // event
+    "ftFunction.txt", // fighter
+    "grFunction.txt", // stage
+    "itFunction.txt", // item
+    "kbFunctoin.txt", // kirby
+    "mjFunction.txt", // major_scene
+    "mnFunction.txt", // minor_scene
+    "tmFunction.txt", // tournament
+];
+
+pub const SYMBOLS_PROPER_NAMES: &[&str] = &[
+    "css",
+    "event",
+    "fighter",
+    "stage",
+    "item",
+    "kirby",
+    "major_scene",
+    "minor_scene",
+    "tournament",
+];

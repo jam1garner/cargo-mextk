@@ -1,6 +1,6 @@
-use crate::iso;
-use crate::Error;
 use crate::paths::{dir_from_id, PathExt};
+use crate::manifest::Manifest;
+use crate::{install, Error};
 
 use std::{io, fs};
 use std::path::Path;
@@ -8,11 +8,9 @@ use std::process::Command;
 
 use include_dir::{include_dir, Dir};
 
-pub fn run(debug: bool) -> Result<(), Error> {
-    let id = "GALE01_v2";
-
-    // Restore iso before installing mods
-    iso::restore(id, false)?;
+pub fn run(_debug: bool, no_restore: bool) -> Result<(), Error> {
+    let toml = Manifest::from_current_directory()?;
+    let id = toml.game_id.as_deref().unwrap_or("GALE01_v2");
 
     let iso_dir = dir_from_id(id);
     if !iso_dir.exists() {
@@ -26,9 +24,7 @@ pub fn run(debug: bool) -> Result<(), Error> {
         create_dolphin_dir(&dolphin_dir, &sys_dir);
     }
 
-    let out = crate::build(debug).unwrap();
-
-    dbg!(out);
+    install(!no_restore).unwrap();
 
     Command::new("dolphin-emu")
         .args(&["-l", "-u"])
