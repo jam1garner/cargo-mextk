@@ -2,6 +2,7 @@ use crate::paths::{PathExt, mextk_bin_dir};
 use crate::Error;
 
 use std::process::{Command, Stdio};
+use std::io::Cursor;
 
 #[cfg(unix)]
 const MEXTK_FILE_NAME: &str = "MexTK";
@@ -18,7 +19,7 @@ fn in_path(cmd: &str) -> bool {
         .is_ok()
 }
 
-pub fn command() -> Result<Command, Error> {
+pub fn command_recursive(try_again: bool) -> Result<Command, Error> {
     for cmd in &["mextk", "MexTK", "MexTk"] {
         if in_path(cmd) {
             return Ok(Command::new(cmd));
@@ -39,9 +40,37 @@ pub fn command() -> Result<Command, Error> {
         } else {
             Err(Error::NoDotNet)
         }
+    } else if try_again {
+        // Download
+        download()?;
+
+        // Try searching again
+        command_recursive(false)
     } else {
         Err(Error::NoMextkInstalled(
             mextk_bin_dir().display().to_string()
         ))
     }
+}
+
+pub fn command() -> Result<Command, Error> {
+    command_recursive(true)
+}
+
+const ZIP_URL: &str = "https://github.com/jam1garner/MexTK/releases/download/cross-platform/mextk.zip";
+
+fn download() -> Result<(), Error> {
+    println!("Downloading mextk...");
+    let mut zip_contents = vec![];
+
+    std::io::copy(
+        &mut ureq::get(ZIP_URL).call().or(Err(Error::NetworkError))?.into_reader(),
+        &mut zip_contents,
+    ).unwrap();
+
+    let mut zip = zip::ZipArchive::new(Cursor::new(zip_contents)).unwrap();
+
+    zip.extract(mextk_bin_dir()).unwrap();
+
+    Ok(())
 }
