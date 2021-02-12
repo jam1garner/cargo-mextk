@@ -3,4 +3,5 @@
 # overrides Fox
 dat = "PlFx.dat"
 
-# uses ""
+# use fighter symbols to allow overriding relevant code
+symbols = "fighter"
