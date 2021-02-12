@@ -12,6 +12,7 @@ pub mod mextk;
 mod dep_files;
 
 const CARGO_OPTIONS: &[&str] = &[
+    "+nightly",
     "rustc",
     "--message-format", "json-diagnostic-rendered-ansi",
     "--target", "powerpc-unknown-linux-gnu",
@@ -28,6 +29,8 @@ const RELEASE: &[&str] = &["--release", "--"];
 const DEBUG: &[&str] = &["--"];
 
 pub fn build(debug: bool) -> Result<PathBuf, Error> {
+    ensure_nightly_ppc_installed();
+
     let toml = Manifest::from_current_directory()?;
 
     let dat_name = toml.dat.ok_or(Error::NoDatName)?;
@@ -160,3 +163,49 @@ pub const SYMBOLS_PROPER_NAMES: &[&str] = &[
     "minor_scene",
     "tournament",
 ];
+
+const TARGET_NAME: &str = "powerpc-unknown-linux-gnu";
+
+fn ensure_nightly_ppc_installed() {
+    // rustup +nightly toolchain list
+    let nightly_installed = 
+            String::from_utf8(
+                Command::new("rustup")
+                    .args(&["toolchain", "list"])
+                    .output()
+                    .unwrap()
+                    .stdout
+            )   
+            .unwrap()
+            .split('\n')
+            .any(|toolchain| toolchain.trim().starts_with("nightly-"));
+
+    if !nightly_installed {
+        // rustup toolchain install nightly
+        Command::new("rustup")
+            .args(&["toolchain", "install", "nightly"])
+            .status()
+            .unwrap();
+    }
+
+    // rustup +nightly target list --installed
+    let ppc_installed = 
+            String::from_utf8(
+                Command::new("rustup")
+                    .args(&["target", "list", "--toolchain", "nightly", "--installed"])
+                    .output()
+                    .unwrap()
+                    .stdout
+            )
+            .unwrap()
+            .split('\n')
+            .any(|target| target.trim() == TARGET_NAME);
+
+    if !ppc_installed {
+        // rustup +nightly target install powerpc-unknown-linux-gnu
+        Command::new("rustup")
+            .args(&["target", "install", "--toolchain", "nightly", TARGET_NAME])
+            .status()
+            .unwrap();
+    }
+}
