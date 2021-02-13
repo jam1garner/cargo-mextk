@@ -18,5 +18,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Windows Specific Setup
+      if: matrix.os == 'windows-latest'
+      run: |
+        curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
+        .\wix311.exe /install /quiet /norestart
+        choco install llvm
     - name: Build
       run: cargo build --verbose
