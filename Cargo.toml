@@ -8,6 +8,9 @@ license = "MIT"
 repository = "https://github.com/jam1garner/cargo-mextk"
 documentation = "https://docs.rs/cargo-mextk"
 
+[package.metadata.wix]
+output = "target/wix/cargo-mextk-installer.msi"
+
 [dependencies]
 thiserror = "1"
 structopt = "0.3"
