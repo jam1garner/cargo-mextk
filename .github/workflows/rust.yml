@@ -24,5 +24,26 @@ jobs:
         curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
         .\wix311.exe /install /quiet /norestart
         choco install llvm
+        cargo install cargo-wix
     - name: Build
-      run: cargo build --verbose
+      if: matrix.os != 'windows-latest'
+      run: cargo build --release
+    - name: Build Windows Installer
+      if: matrix.os == 'windows-latest'
+      run: cargo wix --verbose
+    - uses: actions/upload-artifact@v2
+      if: matrix.os == 'ubuntu-latest'
+      with:
+        name: cargo-mextk (Linux)
+        path: target/release/cargo-mextk
+    - uses: actions/upload-artifact@v2
+      if: matrix.os == 'macOS-latest'
+      with:
+        name: cargo-mextk (macOS)
+        path: target/release/cargo-mextk
+    - uses: actions/upload-artifact@v2
+      if: matrix.os == 'windows-latest'
+      with:
+        name: cargo-mextk-installer.msi
+        path: target/wix/cargo-mextk-installer.msi
+        
