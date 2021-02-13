@@ -1,6 +1,6 @@
 [package]
 name = "cargo-mextk"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["jam1garner <8260240+jam1garner@users.noreply.github.com>"]
 edition = "2018"
 description = "A cargo subcommand for build and working with melee mods"
