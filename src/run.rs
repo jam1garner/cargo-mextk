@@ -8,6 +8,12 @@ use std::process::Command;
 
 use include_dir::{include_dir, Dir};
 
+#[cfg(windows)]
+const DOLPHIN_COMMAND: &str = "Dolphin.exe";
+
+#[cfg(not(windows))]
+const DOLPHIN_COMMAND: &str = "dolphin-emu";
+
 pub fn run(_debug: bool, no_restore: bool) -> Result<(), Error> {
     let toml = Manifest::from_current_directory()?;
     let id = toml.game_id.as_deref().unwrap_or("GALE01_v2");
@@ -26,7 +32,7 @@ pub fn run(_debug: bool, no_restore: bool) -> Result<(), Error> {
 
     install(!no_restore).unwrap();
 
-    Command::new("dolphin-emu")
+    Command::new(DOLPHIN_COMMAND)
         .args(&["-l", "-u"])
         .arg(dolphin_dir)
         .arg("-e")
